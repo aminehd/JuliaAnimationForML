@@ -1,4 +1,5 @@
 ENV["DISPLAY"] = ":0"
+import Pkg; Pkg.add("GLMkie")
 using GLMakie
 using Statistics  # For mean and std
 import Pkg; Pkg.add("GeometryBasics")
