@@ -1,11 +1,12 @@
 import Pkg
-Pkg.add(["GLMakie", "FileIO"])
+Pkg.add(["GLMakie", "FileIO", "Plots"])
 
 using GLMakie
 using FileIO
 using LinearAlgebra
+using Plots
 # Sample data parameters
-num_points = 100                 # Total number of data points
+num_points = 150                 # Total number of data points
 range_x = 20.0                   # Range for x₁ and x₂
 m_start = 2.0                    # Initial slope when zoomed in
 m_end = 5.0                      # Final slope when zoomed out
@@ -24,25 +25,27 @@ true_y0 = dot(true_coefficients, x0)  # Now dot is defined
 
 # Create a single Observable for sampled points positions
 O_sampled_pos = Observable(hcat(X[sampled_indices, 1], zeros(length(sampled_indices))))
-
+leart_y_hat = Observable(19.909)
 # Create a figure with two subplots
-fig = Figure(resolution = (800, 400))
+fig = Figure(resolution = (1600, 800))
 ax1 = Axis(fig[1, 1], title = "Sampled Points", xlabel = "X", ylabel = "Y")
-ax2 = Axis(fig[1, 2], title = "Full Dataset", xlabel = "X", ylabel = "Y")
+y0_hat = Observable(19.90)
+ax2 = Axis(fig[1, 2], title = @lift("The learnt y is: " * string($y0_hat)), xlabel = "X", ylabel = "Y")
 
 # Initialize scatter plots
-scatter_sampled = scatter!(ax1, O_sampled_pos,
+scatter_sampled = GLMakie.scatter!(ax1, O_sampled_pos,
                           color = :blue, markersize = 8, label = "Sampled Points")
-scatter_full_ax1 = scatter!(ax1, X[:, 1], zeros(size(X, 1)),
+scatter_full_ax1 = GLMakie.scatter!(ax1, X[:, 1], zeros(size(X, 1)),
                             color = :gray, markersize = 4, alpha = 0.5, label = "Full Dataset")
 axislegend(ax1)
 
-scatter_full_ax2 = scatter!(ax2, X[:, 1], y,
+scatter_full_ax2 = GLMakie.scatter!(ax2, X[:, 1], y,
                             color = :gray, markersize = 4, alpha = 0.3, label = "Full Dataset")
 axislegend(ax2)
 
 # Add Test Point x0
-scatter!(ax1, x0[1], 0.0, color = :red, markersize = 10, label = "Test Point x₀")
+GLMakie.scatter!(ax1, x0[1], 0.0, color = :red, markersize = 10, label = "Test Point x₀")
+GLMakie.scatter!(ax2, x0[1], y0_hat, color = :red, markersize = 5, label = "Test Point x₀")
 
 # Add True y0 line
 
@@ -50,12 +53,14 @@ scatter!(ax1, x0[1], 0.0, color = :red, markersize = 10, label = "Test Point x�
 initial_radius = 5.0
 ylim_start = true_y0 - 5.0
 ylim_end = true_y0 + 5.0
-ylims!(ax2, minimum(y) - 5, maximum(y) + 5)  # Fixed y-limits for ax2
+GLMakie.ylims!(ax2, minimum(y) - 5, maximum(y) + 5)  # Fixed y-limits for ax2
 # Initialize the Learnt Line in ax2 with placeholder data to prevent errors
 # Initialize the Learnt Line in ax2 with separate x and y vectors
 # Initialize the Learnt Line in ax2 with Observables
-learnt_line_x = Observable([x0[1] - initial_radius, x0[1] + initial_radius])
-learnt_line_y = Observable([0.0, 0.0])
+learnt_line_x = Observable(range(x0[1] - initial_radius, stop=x0[1] + initial_radius, length=100))
+
+# Initialize y-values as zeros (or any constant) with the same length
+learnt_line_y = Observable(zeros(100))
 learnt_line = lines!(ax2, learnt_line_x, learnt_line_y,
                      color = :orange, linewidth = 2, label = "Learnt Line")
 
@@ -72,8 +77,9 @@ function compute_regression(x, y)
     return slope, intercept
 end
 # Define a callback to update ax2's x-axis limits whenever current_radius_obs changes
+    GLMakie.xlims!(ax1, -10, 30)
 on(current_radius_obs) do radius
-    xlims!(ax2, x0[1] - radius, x0[1] + radius)
+    GLMakie.xlims!(ax2, x0[1] - radius, x0[1] + radius)
 end
 # Initialize the Learnt Line in ax2
 # Function to update the Observable with new sampled points
@@ -89,16 +95,25 @@ function update_sampled_points!(frame)
     new_positions = hcat(X[sampled_indices, 1], zeros(length(sampled_indices)))
     O_sampled_pos[] = new_positions  # Assign new positions to the Observable
    
-    
+    regression_x  = 10
     ###
    
     current_radius_obs[] = current_radius
-
+    learnt_y0_hat = Observable([]) 
     if length(sampled_indices) >= 2
         sampled_x = X[sampled_indices, 1]
         sampled_y = y[sampled_indices]
         slope, intercept = compute_regression(sampled_x, sampled_y)
+        y0_hat[] = slope * regression_x .+ intercept
 
+        # Calculate y0 hat (predicted y values)
+        
+        # Update the Observables
+        # push!(learnt_y0_hat[], y0_hat)
+        
+        # Calculate residuals
+        # Plot histogram of residuals
+        # hist!(ax4,learnt_y0_hat[], bins=5, color=:blue, label="Residuals")
         if !isnan(slope) && !isnan(intercept)
             # Ensure x0[1] and current_radius are scalars
             x_center = x0[1]
@@ -115,8 +130,8 @@ function update_sampled_points!(frame)
         end
     else
         # Not enough points to compute regression; reset the learnt line to placeholder
-        learnt_line_x[] = [x0[1] - current_radius, x0[1] + current_radius]
-        learnt_line_y[] = [0.0, 0.0]
+        learnt_line_x[] = range(x0[1] - initial_radius, stop=x0[1] + initial_radius, length=100)
+        learnt_line_y[] = zeros(100)
     end
 end
 
