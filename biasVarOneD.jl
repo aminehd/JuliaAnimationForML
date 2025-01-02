@@ -27,7 +27,7 @@ true_y0 = dot(true_coefficients, x0)  # Now dot is defined
 O_sampled_pos = Observable(hcat(X[sampled_indices, 1], zeros(length(sampled_indices))))
 leart_y_hat = Observable(19.909)
 # Create a figure with two subplots
-fig = Figure(resolution = (1600, 800))
+fig = Figure(resolution = (800, 400))
 ax1 = Axis(fig[1, 1], title = "Sampled Points", xlabel = "X", ylabel = "Y")
 y0_hat = Observable(19.90)
 ax2 = Axis(fig[1, 2], title = @lift("The learnt y is: " * string($y0_hat)), xlabel = "X", ylabel = "Y")
@@ -40,7 +40,7 @@ scatter_full_ax1 = GLMakie.scatter!(ax1, X[:, 1], zeros(size(X, 1)),
 axislegend(ax1)
 
 scatter_full_ax2 = GLMakie.scatter!(ax2, X[:, 1], y,
-                            color = :gray, markersize = 4, alpha = 0.3, label = "Full Dataset")
+                            color = :green, markersize = 4, alpha = 0.3, label = "Full Dataset")
 axislegend(ax2)
 
 # Add Test Point x0
@@ -77,7 +77,7 @@ function compute_regression(x, y)
     return slope, intercept
 end
 # Define a callback to update ax2's x-axis limits whenever current_radius_obs changes
-    GLMakie.xlims!(ax1, -10, 30)
+    GLMakie.xlims!(ax1, 0, 20)
 on(current_radius_obs) do radius
     GLMakie.xlims!(ax2, x0[1] - radius, x0[1] + radius)
 end
